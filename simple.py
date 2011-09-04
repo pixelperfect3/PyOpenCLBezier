@@ -50,16 +50,13 @@ def readBezierFile(fileName):
     order = int(degreeU) + 1
     
     # create list
-    verticesL = []#[[0] * 3] * order
+    
     # numpy array - make sure to specify astype as float32 to avoid /128 errors 
     vertices = empty( (order * order, 4)).astype(numpy.float32)
-    #vertices.dtype = float_
     
     # go through the rest of the lines, read in the curve
     index = 1
     
-    #print len(lines)
-    #print lines
     while index <= (len(lines) - 1):
         # read line
         line = lines[index].split()
@@ -69,11 +66,6 @@ def readBezierFile(fileName):
         
          # assign values
         vertices[index-1] = newList
-        
-        # basic list
-        #verticesL.append(float(line[0]) + 10.0)
-        #verticesL.append(float(line[1]) * 10.0)
-        #verticesL.append(float(line[2]) * 10.0)
         
         # increment
         index = index + 1
@@ -99,10 +91,6 @@ def main(argv=None):
     vertices = readBezierFile("curve1") * 10.0
     print vertices
     
-    # flatten the numpy array
-    #vertices.shape = (4 * 3)
-    #print vertices.shape
-    
     print "Vertices:" 
     print vertices.size
     
@@ -124,12 +112,7 @@ def main(argv=None):
             uvValues[index] = [ fU/10.0, fV/10.0]
             index = index + 1
          
-    #uvValues = array([ [0.0, 0.0, 0.0, 0.0], [0.0, 0.2, 0.0, 0.0], [0.0, 0.4, 0.0, 0.0], [0.0, 0.6, 0.0, 0.0], [0.0, 0.8, 0.0, 0.0], [0.0, 1.0, 0.0, 0.0],
-    #             [0.2, 0.0, 0.0, 0.0], [0.2, 0.2, 0.0, 0.0], [0.2, 0.4, 0.0, 0.0], [0.2, 0.6, 0.0, 0.0], [0.2, 0.8, 0.0, 0.0], [0.2, 1.0, 0.0, 0.0],
-    #             [0.4, 0.0, 0.0, 0.0], [0.4, 0.2, 0.0, 0.0], [0.4, 0.4, 0.0, 0.0], [0.4, 0.6, 0.0, 0.0], [0.4, 0.8, 0.0, 0.0], [0.4, 1.0, 0.0, 0.0],
-    #             [0.6, 0.0, 0.0, 0.0], [0.6, 0.2, 0.0, 0.0], [0.6, 0.4, 0.0, 0.0], [0.6, 0.6, 0.0, 0.0], [0.6, 0.8, 0.0, 0.0], [0.6, 1.0, 0.0, 0.0],
-    #             [0.8, 0.0, 0.0, 0.0], [0.8, 0.2, 0.0, 0.0], [0.8, 0.4, 0.0, 0.0], [0.8, 0.6, 0.0, 0.0], [0.8, 0.8, 0.0, 0.0], [0.8, 1.0, 0.0, 0.0],
-    #             [1.0, 0.0, 0.0, 0.0], [1.0, 0.2, 0.0, 0.0], [1.0, 0.4, 0.0, 0.0], [1.0, 0.6, 0.0, 0.0], [1.0, 0.8, 0.0, 0.0], [1.0, 1.0, 0.0, 0.0] ]);
+
     print "\nUV Values: "
     print uvValues
     print uvValues.size
@@ -154,14 +137,7 @@ def main(argv=None):
     # the uv buffer
     uv_buffer = cl.Buffer(ctx, mf.READ_ONLY | mf.COPY_HOST_PTR, hostbuf=uvValues)
     
-    # intermediate output buffer
-    #inter_buf = cl.Buffer(ctx, mf.READ_WRITE, vertices.nbytes - 32)
-    
-    # create intermediate local buffer
-    #local_buf
-    
     # final output
-    #output_buf = cl.Buffer(ctx, mf.WRITE_ONLY, 32) # just one value
     output_buffer = cl.Buffer(ctx, mf.WRITE_ONLY, uvValues.nbytes * 2) # double the amount of value
     
     # the OpenCL program
@@ -183,41 +159,9 @@ def main(argv=None):
     eval = empty( 36*4).astype(numpy.float32)#numpy.empty_like(vertices)
     cl.enqueue_read_buffer(cq, output_buffer, eval).wait()
     
-    
-    ####################
-    #### NAIVE METHOD ########
-    #### Loop through all possible u-values - naive method
-    ''' result = []
-    u = 0.0
-    v = 0.0
-    while u <= 1.0:
-        # call the program
-        # NOTE: Need to convert to proper formats using numpy
-        prg.bezier(cq, ((degreeU+1),), None, numpy.int32(degreeU), numpy.float32(u), vertex_buffer, inter_buf)
-        
-        v = 0.0
-        
-        while v <= 1.0:
-            # call again
-            prg.bezier(cq, (1,), None, numpy.int32(degreeU), numpy.float32(v), inter_buf, output_buf)
-            
-            # get the result back
-            eval = empty( 4).astype(numpy.float32)#numpy.empty_like(vertices)
-            cl.enqueue_read_buffer(cq, output_buf, eval).wait()
-            
-            # add it to results
-            result.append(eval)
-            
-            v += 0.5
-        
-        # increment
-        u += 0.5 '''
         
     print "It took: ", time.time() - start,"seconds."
     print eval
-    #print "\nResult:"
-    #print result
-    ########### END OF NAIVE METHOD ###############
     
 # main invocation
 if __name__ == "__main__":
