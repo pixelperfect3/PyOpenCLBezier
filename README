@@ -1,3 +1,49 @@
 Author: Shayan Javed
 
 This is just a simple PyOpenCL demo to test various techniques on evaluating Bezier Curves/Surfaces
+
+UPDATE September 3rd, 2011:
+I think I got this to work. The problem was that the UV values
+array was not being properly generated. Had to setup a numpy array explicitly
+
+How it works:
+-------------
+Input 1: 4 * 4 (16) control points of bicubic bezier patch read from file (float4)
+Input 2: float2 array of UV values. Step size of 0.2, starts from 0.0 to 1.0. Total size of float2 array is therefore 36. Usually this generation of UV values is done by the tessellation engine in DirectX11/OpenGL 4.0
+
+OpenCL setup:
+------------
+Advantage of PyOpenCL seems to be that setup is simple. don't have to spend too much time worrying about contexts, queues, etc.
+
+Global work size = 36 * 9 // 36 is the number of work groups, and 9 is the number of work-items in each work-group (In CUDA Speak Grid = work-group, thread = work-item)
+
+Local work size = 9. For each UV value, we are going to have 9 work-items used to evaluate the bezier-surface
+
+Bezier-surface evaluation:
+--------------------------
+I used the deCasteljau algorithm for evaluating. The control point setup is like this:
+
+b30  b31  b32  b33
+b20  b21  b22  b23
+b10  b11  b12  b13
+b00  b01  b02  b03
+
+For each work-item we are going to try and figure out which UV-value we are going to evaluate:
+
+1) First we figure out the global id (gid) to output to: get_global_id(0)/9. This lets us know the output array index to output to
+2) The gid also let's us know the UV-value index. 
+3) Next we look up the local id (lid). This is going to be from 0-8. 
+
+   For each lid we are going to calculate one "corner" of the bezier patch. The output from this is stored in local memory.
+4) We need to synchronize across all the work-items inside the work-group so that we can use the values in the next step. we use barrier(CLK_LOCAL_MEM_FENCE)
+5) Now we are dealing with a quadratic bezier curve. We use similar steps as before, but now only do it for the first 4 work-items (0-4). We synchronize again. The output is stored in another local_memory buffer
+6) Now in the final step we are just evaluating the linear bezier curve. Just do linear interpolation across the four points. This is only done for work-item 0. Store the output in the output buffer
+
+As of right now it seems to work, but will need to verify with a CPU implementation
+
+Shortcomings and future work:
+----------------------------
+- While local memory is being used, after synchronization half the work-items are being wasted. 
+- Should integrate with (Py)OpenGL so that we can see visual results.
+- Expand to a whole mesh rather than just one patch. Use for evaluating Approximating Catmull-Clark (ACC) meshes for example?
+
