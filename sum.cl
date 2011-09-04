@@ -1,6 +1,6 @@
 // Linear interpolation between a pair of points by a u-value
 float4 lerp(float4 val1, float4 val2, float u) {
-	return (1.0 - u) * val1 + u * val2;
+	return ((1.0 - u) * val1) + (u * val2);
 }
 
 // The optimized version:
@@ -11,7 +11,7 @@ __kernel void bezierEval(__global const float4 *controlPoints, __global float2 *
  	// get the global id and then just output that
  	int gid = get_global_id(0)/9;
  	
- 	// get the uv values - PROBLEM: NOT READING UV VALUES
+ 	// get the uv values - PROBLEM: NOT READING UV VALUES (FIXED)
  	float2 uv = uvValues[gid];//get_global_id(0)];
  	
  	// get the row
@@ -43,7 +43,7 @@ __kernel void bezierEval(__global const float4 *controlPoints, __global float2 *
  	// synchronize in work-group
  	barrier(CLK_LOCAL_MEM_FENCE);
  	
- 	// only do it for certain work-items
+ 	// only do it for certain work-items (now evaluating quadratic)
  	if (lid < 4) {
  		row = lid/2; 		// 2 = degree
  		float4 b002 = local_points[row + lid];
@@ -61,13 +61,20 @@ __kernel void bezierEval(__global const float4 *controlPoints, __global float2 *
  		local_points2[lid] = newPoint2;
  		barrier(CLK_LOCAL_MEM_FENCE);
  		
+ 		//output[gid] = newPoint2;
+ 		
  		// only do it for the first work-item
- 		if (lid == 0) {
+ 		if (lid == 1) {
  			float4 val13 = lerp(local_points2[0], local_points2[1], uv.x);
  			float4 val23 = lerp(local_points2[2], local_points2[3], uv.x);
  			
  			float4 newPoint3 = lerp(val13, val23, uv.y);
+ 			int x = row + lid + 5;
+ 			//output[gid] = (float4)(x, 0, 0, 0);
  			output[gid] = newPoint3;
  		}
- 	} 
+ 	}
+ 	
+ 	int x = row + lid;
+ 	//output[gid] = newPoint;//(float4)(x, 0, 0.0, 0.0);
  }

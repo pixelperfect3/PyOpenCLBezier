@@ -6,6 +6,12 @@ UPDATE September 3rd, 2011:
 I think I got this to work. The problem was that the UV values
 array was not being properly generated. Had to setup a numpy array explicitly
 
+UPDATE September 4th, 2011:
+It actually wasn't working properly before. This was because of local memory
+size not being proper. I was allocating (local_size * 4) when I should be
+allocating (local_size * 4 * 4) to account for the fact that it was float4.
+Similarly the 2nd local memory should be 4 * 4 * 4. This seems to have fixed it
+
 How it works:
 -------------
 Input 1: 4 * 4 (16) control points of bicubic bezier patch read from file (float4)

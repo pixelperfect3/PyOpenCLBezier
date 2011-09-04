@@ -102,7 +102,7 @@ def main(argv=None):
     
     # Array of UV values - 36 in total (detail by 0.2)
     uvValues = empty( (36, 2)).astype(numpy.float32)
-    print uvValues
+    
     index = 0
     for u in range(0, 12, 2): # step = 2
         for v in range(0, 12, 2):
@@ -152,7 +152,7 @@ def main(argv=None):
     localSize = 9 # for bicubic patches
     
     # evaluate
-    prg.bezierEval(cq, (globalSize,), (localSize,), vertex_buffer, uv_buffer, output_buffer, cl.LocalMemory(9 * 9), cl.LocalMemory(9 * 4)) # local_buffer)#numpy.int32(degreeU), numpy.float32(u), vertex_buffer, inter_buf)
+    prg.bezierEval(cq, (globalSize,), (localSize,), vertex_buffer, uv_buffer, output_buffer, cl.LocalMemory(9 * numpy.dtype('float32').itemsize * 4), cl.LocalMemory(4 * numpy.dtype('float32').itemsize * 4)) # local_buffer)#numpy.int32(degreeU), numpy.float32(u), vertex_buffer, inter_buf)
     
     # read back the result - works!
     #eval = empty((36, 4)).astype(numpy.float32);
@@ -161,7 +161,28 @@ def main(argv=None):
     
         
     print "It took: ", time.time() - start,"seconds."
-    print eval
+    
+    # Output to a file
+    f = open('output', 'w')
+    index = 0
+    j = 6
+    while index < 36:
+        val1 = eval[index * 4]
+        val2 = eval[index * 4 + 1]
+        val3 = eval[index * 4 + 2]
+        val4 = eval[index * 4 + 3]
+        f.write(repr(round(val1, 2)).rjust(j))
+        f.write(" ")
+        f.write(repr(round(val2, 2)).rjust(j))
+        f.write(" ")
+        f.write(repr(round(val3, 2)).rjust(j))
+        f.write(" ")
+        f.write(repr(round(val4, 2)).rjust(j))
+        f.write("\n")
+        
+        index = index + 1
+    
+    #print eval
     
 # main invocation
 if __name__ == "__main__":
