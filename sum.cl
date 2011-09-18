@@ -78,3 +78,31 @@ __kernel void bezierEval(__global const float4 *controlPoints, __global float2 *
  	int x = row + lid;
  	//output[gid] = newPoint;//(float4)(x, 0, 0.0, 0.0);
  }
+ 
+ float4 evalCubicCurve(float4 b00, float4 b01, float4 b02, float4 b03, float u) {
+ 	return (1-u) * (1-u) * (1-u) *     b00 + 
+			3    * (1-u) * (1-u) * u * b01 + 
+			3    * (1-u) *    u  * u * b02 + 
+			u    *     u *    u  *     b03;
+ }
+ 
+ // The 2nd method of evaluating
+ // Evaluates 1 UV-value pair per thread (work-item)
+ __kernel void bezierEval2(__global const float4 *controlPoints, __global float2 *uvValues,
+                        __global float4 *output) {
+ 
+ 	// get the global id and then just output that
+ 	int gid = get_global_id(0);
+ 	
+ 	// get the uv values
+ 	float2 uv = uvValues[gid];
+ 	
+	// evaluate row1
+	float4 b00 = evalCubicCurve(controlPoints[0], controlPoints[1], controlPoints[2], controlPoints[3], uv.x);
+	float4 b01 = evalCubicCurve(controlPoints[4], controlPoints[5], controlPoints[6], controlPoints[7], uv.x);
+	float4 b02 = evalCubicCurve(controlPoints[8], controlPoints[9], controlPoints[10], controlPoints[11], uv.x);
+	float4 b03 = evalCubicCurve(controlPoints[12], controlPoints[13], controlPoints[14], controlPoints[15], uv.x);
+ 		
+	// evaluated point
+ 	output[gid] = evalCubicCurve(b00, b01, b02, b03, uv.y);
+ }

@@ -2,9 +2,11 @@ Author: Shayan Javed
 
 This is just a simple PyOpenCL demo to test various techniques on evaluating Bezier Curves/Surfaces
 
-UPDATE September 3rd, 2011:
-I think I got this to work. The problem was that the UV values
-array was not being properly generated. Had to setup a numpy array explicitly
+UPDATE September 18th, 2011:
+Added a second way of doing the evaluation (method2.py).
+This method runs 1 work-item for each UV pair. This is how it's implemented in the Domain/Tessellator/Hull-Shader pipeline
+for DX11 I think. It does straightforward evaluation while reading from global memory, and no local memory is used.
+Apparently in the latest Nvidia Fermi architecture (GT 400+), global reads are cached, so perhaps no need to use local memory.
 
 UPDATE September 4th, 2011:
 It actually wasn't working properly before. This was because of local memory
@@ -12,8 +14,13 @@ size not being proper. I was allocating (local_size * 4) when I should be
 allocating (local_size * 4 * 4) to account for the fact that it was float4.
 Similarly the 2nd local memory should be 4 * 4 * 4. This seems to have fixed it
 
-How it works:
--------------
+UPDATE September 3rd, 2011:
+I think I got this to work. The problem was that the UV values
+array was not being properly generated. Had to setup a numpy array explicitly
+
+
+How it works (method 1 using local memory):
+-------------------------------------------
 Input 1: 4 * 4 (16) control points of bicubic bezier patch read from file (float4)
 Input 2: float2 array of UV values. Step size of 0.2, starts from 0.0 to 1.0. Total size of float2 array is therefore 36. Usually this generation of UV values is done by the tessellation engine in DirectX11/OpenGL 4.0
 
