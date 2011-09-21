@@ -16,31 +16,67 @@ degreeU = 0
 degreeV = 0
 detail = 0.0
 
-
-# class definition begins here
-# degree = the degree of the bezier curve
-# detail = how finely rendererd the curve should be (increments 
-class BezierCurve:
-    def __init__(self, degree=4, detail=0.1, vertices=[]):
-        self.degree = degree
-        self.detail = detail
-        
-        # vertices is a 2d-list [ [x0 y0 z0] [x1 y1 z1] ... [xN yN zN] ]
-        self.vertices = vertices
-
-# the function to read a bezier file - returns list of vertices
+# the function to read a (modified) bezier view file - returns list of vertices
 def readBezierFile(fileName):
     # open the file first
     file = open(fileName)
     
     # read all the text
-    str = file.read()
+    #str = file.read()
     
     # split it up line-by-line
-    lines = str.split('\n')
+    #lines = str.split('\n')
+    
+    # vertices
+    vertices = []
+    
+    # keep reading until you reach end of file
+    while True:
+        # read 1 line
+        line1 = file.readline()
+        #print "Line: ", line1
+        
+        # EOF check
+        if (len(line1) == 0):
+            break
+        
+        # split based on space and read the degrees
+        line2 = line1.split()
+        degree = int(line2[0])
+        order = degree + 1
+        
+        # create numpy array
+        # numpy array - make sure to specify astype as float32 to avoid /128 errors 
+        #npVertices = empty( (order * order, 4)).astype(numpy.float32)
+        
+        index = 0
+    
+        while index < 16:
+            # read line
+            line = file.readline().split()
+       
+            # create a new list
+            vertices.append(line[0])
+            vertices.append(line[1])
+            vertices.append(line[2])
+            vertices.append(0)
+            
+            #newList = [line[0], line[1], line[2], 0]
+            #print "newList: ", newList
+            
+             # assign values
+            #npVertices[index] = newList
+            
+            # increment
+            index = index + 1
+        
+        # add to the overall list of vertices
+        #vertices.append(npVertices)
+        
+        ## END OF TRUE LOOP
     
     # first line - degree + detail
-    line1 = lines[0].split()
+    '''line1 = lines[0].split()
     global degreeU
     global degreeV
     global detail
@@ -68,7 +104,7 @@ def readBezierFile(fileName):
         vertices[index-1] = newList
         
         # increment
-        index = index + 1
+        index = index + 1'''
     
     return vertices
 
@@ -88,11 +124,20 @@ def main(argv=None):
         argv = sys.argv
     
     # try to read from a file here - returns the array
-    vertices = readBezierFile("curve1") * 10.0
-    print vertices
+    vertices = readBezierFile("cube.bv")# * 10.0
+    
+    
+    # create numpy array
+    npVertices = array( vertices, dtype = float32)
+    
+    print npVertices
     
     print "Vertices:" 
-    print vertices.size
+    print npVertices.size
+    
+    # Number of patches (16 control points per patch)
+    numPatches = (npVertices.size/16)/4
+    print "NumPatches: ", numPatches
     
     # read the kernel file
     kernelString = readFile("bezier.cl")
@@ -147,7 +192,7 @@ def main(argv=None):
     
     # input buffers
     # the control point vertices
-    vertex_buffer = cl.Buffer(ctx, mf.READ_ONLY | mf.COPY_HOST_PTR, hostbuf=vertices)
+    vertex_buffer = cl.Buffer(ctx, mf.READ_ONLY | mf.COPY_HOST_PTR, hostbuf=npVertices)
     
     # the uv buffer
     uv_buffer = cl.Buffer(ctx, mf.READ_ONLY | mf.COPY_HOST_PTR, hostbuf=uvValues)
@@ -184,7 +229,7 @@ def main(argv=None):
     print "It took: ", time.time() - start,"seconds."
     
     # Output to a file
-    f = open('output2', 'w')
+    f = open('output2-bb', 'w')
     index = 0
     j = 6
     while index < 36:
