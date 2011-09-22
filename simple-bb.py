@@ -166,7 +166,7 @@ def main(argv=None):
     print "It took: ", time.time() - start,"seconds."
     
     # Output to a file
-    f = open('output', 'w')
+    f = open('output-bb', 'w')
     index = 0
     j = 6
     while index < 36:

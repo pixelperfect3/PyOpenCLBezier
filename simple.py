@@ -127,7 +127,7 @@ def main(argv=None):
     ctx = cl.Context([dev])
     #ctx = cl.create_some_context()
     # command queue
-    cq = cl.CommandQueue(ctx)
+    cq = cl.CommandQueue(ctx, properties=cl.command_queue_properties.PROFILING_ENABLE)
     # memory flags
     mf = cl.mem_flags
     
@@ -155,7 +155,12 @@ def main(argv=None):
     start = time.time()
     
     # evaluate
-    prg.bezierEval(cq, (globalSize,), (localSize,), vertex_buffer, uv_buffer, output_buffer, cl.LocalMemory(9 * numpy.dtype('float32').itemsize * 4), cl.LocalMemory(4 * numpy.dtype('float32').itemsize * 4)) # local_buffer)#numpy.int32(degreeU), numpy.float32(u), vertex_buffer, inter_buf)
+    exec_evt = prg.bezierEval(cq, (globalSize,), (localSize,), vertex_buffer, uv_buffer, output_buffer, cl.LocalMemory(9 * numpy.dtype('float32').itemsize * 4), cl.LocalMemory(4 * numpy.dtype('float32').itemsize * 4)) # local_buffer)#numpy.int32(degreeU), numpy.float32(u), vertex_buffer, inter_buf)
+    exec_evt.wait()
+    
+    # elapsed time
+    elapsed = exec_evt.profile.end - exec_evt.profile.start
+    print("Execution time of test: %g " % elapsed)
     
     # read back the result - works!
     #eval = empty((36, 4)).astype(numpy.float32);

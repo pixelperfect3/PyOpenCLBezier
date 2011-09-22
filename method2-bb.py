@@ -9,6 +9,8 @@ import sys
 import pyopencl as cl
 from numpy import *
 import numpy
+
+import datetime
 import time
 
 # Global variables
@@ -40,8 +42,12 @@ def readBezierFile(fileName):
         if (len(line1) == 0):
             break
         
+        # read group and number
+        l1 = file.readline()
+        l2 = file.readline()
+        
         # split based on space and read the degrees
-        line2 = line1.split()
+        line2 = l2.split()
         degree = int(line2[0])
         order = degree + 1
         
@@ -74,38 +80,7 @@ def readBezierFile(fileName):
         #vertices.append(npVertices)
         
         ## END OF TRUE LOOP
-    
-    # first line - degree + detail
-    '''line1 = lines[0].split()
-    global degreeU
-    global degreeV
-    global detail
-    degreeU = int(line1[0])
-    degreeV = int(line1[1])
-    detail = float(line1[2])
-    order = int(degreeU) + 1
-    
-    # create list
-    
-    # numpy array - make sure to specify astype as float32 to avoid /128 errors 
-    vertices = empty( (order * order, 4)).astype(numpy.float32)
-    
-    # go through the rest of the lines, read in the curve
-    index = 1
-    
-    while index <= (len(lines) - 1):
-        # read line
-        line = lines[index].split()
-       
-        # create a new list
-        newList = [line[0], line[1], line[2], 0]
         
-         # assign values
-        vertices[index-1] = newList
-        
-        # increment
-        index = index + 1'''
-    
     return vertices
 
 # reads a file and returns all the text as a string
@@ -124,7 +99,7 @@ def main(argv=None):
         argv = sys.argv
     
     # try to read from a file here - returns the array
-    vertices = readBezierFile("cube.bv")# * 10.0
+    vertices = readBezierFile("cube2.bv")# * 10.0
     
     
     # create numpy array
@@ -183,8 +158,9 @@ def main(argv=None):
     # 2 ways of creating it. First directly specifying the dev_type and the 2nd just does it some way I guess
     ctx = cl.Context([dev])
     #ctx = cl.create_some_context()
-    # command queue
-    cq = cl.CommandQueue(ctx)
+    
+    # command queue - NEW: ENABLE PROFILING
+    cq = cl.CommandQueue(ctx, properties=cl.command_queue_properties.PROFILING_ENABLE)
     # memory flags
     mf = cl.mem_flags
     
@@ -198,7 +174,7 @@ def main(argv=None):
     uv_buffer = cl.Buffer(ctx, mf.READ_ONLY | mf.COPY_HOST_PTR, hostbuf=uvValues)
     
     # final output
-    output_buffer = cl.Buffer(ctx, mf.WRITE_ONLY, uvValues.nbytes * 2) # double the amount of value
+    output_buffer = cl.Buffer(ctx, mf.WRITE_ONLY, uvValues.nbytes * 2 * numPatches) # double the amount of value
     
     # the OpenCL program
     prg = cl.Program(ctx, kernelString).build()
@@ -206,23 +182,29 @@ def main(argv=None):
     
     
     ##########################
-    # DIFFERENT STARTS HERE
+    # EVALUATION STARTS HERE
     #########################
     
-    # the global size (number of uv-values): 36
-    globalSize = 36
+    # the global size (number of uv-values * number of patches): 36 * numPatches
+    numUVs = uvValues.size/2 # 72/2 = 36
+    globalSize = numUVs * numPatches
 
-    localSize = 36 # 36 threads per work-group? Then only 1 work-group
+    localSize = numUVs # 36 threads per work-group?
     
     # timer start
     start = time.time()
     
     # evaluate
-    prg.bezierEval2(cq, (globalSize,), (localSize,), vertex_buffer, uv_buffer, output_buffer)# cl.LocalMemory(9 * numpy.dtype('float32').itemsize * 4), cl.LocalMemory(4 * numpy.dtype('float32').itemsize * 4)) # local_buffer)#numpy.int32(degreeU), numpy.float32(u), vertex_buffer, inter_buf)
+    exec_evt = prg.bezierEval2Multiple(cq, (globalSize,), (localSize,), vertex_buffer, uv_buffer, output_buffer) # cl.LocalMemory(9 * numpy.dtype('float32').itemsize * 4), cl.LocalMemory(4 * numpy.dtype('float32').itemsize * 4)) # local_buffer)#numpy.int32(degreeU), numpy.float32(u), vertex_buffer, inter_buf)
+    exec_evt.wait()
     
-    # read back the result - works!
-    #eval = empty((36, 4)).astype(numpy.float32);
-    eval = empty( 36*4).astype(numpy.float32)#numpy.empty_like(vertices)
+    # find time taken
+    # print exec_evt.profile.start
+    elapsed = exec_evt.profile.end - exec_evt.profile.start
+    print("Execution time of test: %g " % elapsed)
+    
+    # read back the result
+    eval = empty( numUVs*4*numPatches).astype(numpy.float32)
     cl.enqueue_read_buffer(cq, output_buffer, eval).wait()
     
         
@@ -232,7 +214,13 @@ def main(argv=None):
     f = open('output2-bb', 'w')
     index = 0
     j = 6
-    while index < 36:
+    '''while index < numUVs * 4 * numPatches:
+        val1 = eval[index]
+        f.write(repr(round(val1, 2)).rjust(j))
+        f.write("\n")
+        index = index + 1'''
+        
+    while index < numUVs * numPatches:
         val1 = eval[index * 4]
         val2 = eval[index * 4 + 1]
         val3 = eval[index * 4 + 2]
@@ -247,6 +235,8 @@ def main(argv=None):
         f.write("\n")
         
         index = index + 1
+        
+        
     
     #print eval
     
