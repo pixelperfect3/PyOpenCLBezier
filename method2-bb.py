@@ -67,17 +67,8 @@ def readBezierFile(fileName):
             vertices.append(line[2])
             vertices.append(0)
             
-            #newList = [line[0], line[1], line[2], 0]
-            #print "newList: ", newList
-            
-             # assign values
-            #npVertices[index] = newList
-            
             # increment
             index = index + 1
-        
-        # add to the overall list of vertices
-        #vertices.append(npVertices)
         
         ## END OF TRUE LOOP
         

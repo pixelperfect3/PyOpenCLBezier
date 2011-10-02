@@ -76,7 +76,7 @@ def main(argv=None):
         argv = sys.argv
     
     # try to read from a file here - returns the array
-    vertices = readBezierFile("curve1") * 10.0
+    vertices = readBezierFile("patch1") #"curve1")# * 10.0
     print vertices
     
     print "Vertices:" 
